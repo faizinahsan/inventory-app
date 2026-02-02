@@ -1,29 +1,40 @@
 package http
 
 import (
-	"github.com/gin-gonic/gin"
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/gofiber/fiber/v2/middleware/recover"
 	"inventory-app/internal/interfaces/handlers"
 	"inventory-app/internal/interfaces/middleware"
 )
 
 // Router holds the HTTP router and handlers
 type Router struct {
-	engine         *gin.Engine
+	app            *fiber.App
 	productHandler *handlers.ProductHandler
 }
 
 // NewRouter creates a new HTTP router
 func NewRouter(productHandler *handlers.ProductHandler) *Router {
-	gin.SetMode(gin.ReleaseMode)
-	engine := gin.New()
+	app := fiber.New(fiber.Config{
+		ErrorHandler: func(c *fiber.Ctx, err error) error {
+			code := fiber.StatusInternalServerError
+			if e, ok := err.(*fiber.Error); ok {
+				code = e.Code
+			}
+			return c.Status(code).JSON(fiber.Map{
+				"error": err.Error(),
+			})
+		},
+	})
 
 	// Add middleware
-	engine.Use(gin.Logger())
-	engine.Use(gin.Recovery())
-	engine.Use(middleware.CORS())
+	app.Use(logger.New())
+	app.Use(recover.New())
+	app.Use(middleware.CORS())
 
 	return &Router{
-		engine:         engine,
+		app:            app,
 		productHandler: productHandler,
 	}
 }
@@ -31,21 +42,21 @@ func NewRouter(productHandler *handlers.ProductHandler) *Router {
 // SetupRoutes sets up all HTTP routes
 func (r *Router) SetupRoutes() {
 	// Health check endpoint
-	r.engine.GET("/health", r.healthCheck)
+	r.app.Get("/health", r.healthCheck)
 
 	// API v1 routes
-	v1 := r.engine.Group("/api/v1")
+	v1 := r.app.Group("/api/v1")
 	{
 		// Product routes
 		products := v1.Group("/products")
 		{
-			products.POST("", r.productHandler.CreateProduct)
-			products.GET("", r.productHandler.ListProducts)
-			products.GET("/search", r.productHandler.SearchProducts)
-			products.GET("/low-stock", r.productHandler.GetLowStockProducts)
-			products.GET("/:id", r.productHandler.GetProduct)
-			products.PUT("/:id", r.productHandler.UpdateProduct)
-			products.DELETE("/:id", r.productHandler.DeleteProduct)
+			products.Post("/", r.productHandler.CreateProduct)
+			products.Get("/", r.productHandler.ListProducts)
+			products.Get("/search", r.productHandler.SearchProducts)
+			products.Get("/low-stock", r.productHandler.GetLowStockProducts)
+			products.Get("/:id", r.productHandler.GetProduct)
+			products.Put("/:id", r.productHandler.UpdateProduct)
+			products.Delete("/:id", r.productHandler.DeleteProduct)
 		}
 
 		// TODO: Add inventory routes
@@ -53,14 +64,14 @@ func (r *Router) SetupRoutes() {
 	}
 }
 
-// GetEngine returns the gin engine
-func (r *Router) GetEngine() *gin.Engine {
-	return r.engine
+// GetApp returns the fiber app
+func (r *Router) GetApp() *fiber.App {
+	return r.app
 }
 
 // healthCheck handles health check requests
-func (r *Router) healthCheck(c *gin.Context) {
-	c.JSON(200, gin.H{
+func (r *Router) healthCheck(c *fiber.Ctx) error {
+	return c.JSON(fiber.Map{
 		"status":  "ok",
 		"message": "Inventory Management API is running",
 	})

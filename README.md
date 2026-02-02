@@ -6,6 +6,14 @@ This repo is for my personal projects for managing inventory app built with **Do
 
 This application follows **Domain Driven Design (DDD)** principles with Clean Architecture, organized into the following layers:
 
+### Technology Stack
+
+- **Framework**: Go Fiber v2 (High-performance HTTP framework)
+- **Configuration**: Viper (Configuration management with .env support)
+- **Database**: PostgreSQL with Goose migrations
+- **Logging**: Zap (Structured logging)
+- **Architecture**: Domain Driven Design with Clean Architecture
+
 ### Project Structure
 
 ```
@@ -373,20 +381,21 @@ make lint
 |----------|-------------|---------|
 | `SERVER_HOST` | Server host | `localhost` |
 | `SERVER_PORT` | Server port | `8080` |
-| `DB_HOST` | Database host | `localhost` |
-| `DB_PORT` | Database port | `5432` |
-| `DB_USER` | Database user | `user` |
-| `DB_PASSWORD` | Database password | `myAwEsOm3pa55@w0rd` |
-| `DB_NAME` | Database name | `inventory_db` |
-| `DB_SSL_MODE` | Database SSL mode | `disable` |
-| `LOG_LEVEL` | Log level (debug/info/warn/error) | `info` |
-| `LOG_FORMAT` | Log format (json/console) | `console` |
+| `DATABASE_HOST` | Database host | `localhost` |
+| `DATABASE_PORT` | Database port | `5432` |
+| `DATABASE_USER` | Database user | `user` |
+| `DATABASE_PASSWORD` | Database password | `myAwEsOm3pa55@w0rd` |
+| `DATABASE_DBNAME` | Database name | `inventory_db` |
+| `DATABASE_SSLMODE` | Database SSL mode | `disable` |
+| `LOGGER_LEVEL` | Log level (debug/info/warn/error) | `info` |
+| `LOGGER_FORMAT` | Log format (json/console) | `console` |
 | `ENV` | Environment (development/production) | `development` |
 
-**Note:** Database credentials must match the `DNSDB` connection string in Makefile:
-```
-postgres://user:myAwEsOm3pa55@w0rd@localhost:5432/inventory_db?sslmode=disable
-```
+**Configuration with Viper:**
+- Uses dot notation internally (`server.host`, `database.user`, etc.)
+- Environment variables use underscore format (`SERVER_HOST`, `DATABASE_USER`, etc.)
+- Supports both .env files and environment variables
+- Automatic conversion between formats (e.g., `server.host` ↔ `SERVER_HOST`)
 
 ## 📋 TODO
 

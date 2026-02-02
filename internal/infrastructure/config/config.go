@@ -2,8 +2,9 @@ package config
 
 import (
 	"fmt"
-	"os"
-	"strconv"
+	"strings"
+
+	"github.com/spf13/viper"
 )
 
 // Config holds all configuration for the application
@@ -35,28 +36,68 @@ type LoggerConfig struct {
 	Format string
 }
 
-// Load loads configuration from environment variables
+// Load loads configuration using Viper
 func Load() (*Config, error) {
+	viper.SetConfigName("config")
+	viper.SetConfigType("env")
+	viper.AddConfigPath(".")
+	viper.AddConfigPath("./")
+
+	// Enable environment variables
+	viper.AutomaticEnv()
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+
+	// Set default values
+	setDefaults()
+
+	// Read config file if exists (optional)
+	if err := viper.ReadInConfig(); err != nil {
+		// Config file is optional, just log the error
+		fmt.Printf("No config file found, using environment variables and defaults: %v\n", err)
+	}
+
 	config := &Config{
 		Server: ServerConfig{
-			Host: getEnvOrDefault("SERVER_HOST", "localhost"),
-			Port: getIntEnvOrDefault("SERVER_PORT", 8080),
+			Host: viper.GetString("server.host"),
+			Port: viper.GetInt("server.port"),
 		},
 		Database: DatabaseConfig{
-			Host:     getEnvOrDefault("DB_HOST", "localhost"),
-			Port:     getIntEnvOrDefault("DB_PORT", 5432),
-			User:     getEnvOrDefault("DB_USER", "user"),
-			Password: getEnvOrDefault("DB_PASSWORD", "myAwEsOm3pa55@w0rd"),
-			DBName:   getEnvOrDefault("DB_NAME", "inventory_db"),
-			SSLMode:  getEnvOrDefault("DB_SSL_MODE", "disable"),
+			Host:     viper.GetString("database.host"),
+			Port:     viper.GetInt("database.port"),
+			User:     viper.GetString("database.user"),
+			Password: viper.GetString("database.password"),
+			DBName:   viper.GetString("database.dbname"),
+			SSLMode:  viper.GetString("database.sslmode"),
 		},
 		Logger: LoggerConfig{
-			Level:  getEnvOrDefault("LOG_LEVEL", "info"),
-			Format: getEnvOrDefault("LOG_FORMAT", "json"),
+			Level:  viper.GetString("logger.level"),
+			Format: viper.GetString("logger.format"),
 		},
 	}
 
 	return config, nil
+}
+
+// setDefaults sets default configuration values
+func setDefaults() {
+	// Server defaults
+	viper.SetDefault("server.host", "localhost")
+	viper.SetDefault("server.port", 8080)
+
+	// Database defaults
+	viper.SetDefault("database.host", "localhost")
+	viper.SetDefault("database.port", 5432)
+	viper.SetDefault("database.user", "user")
+	viper.SetDefault("database.password", "myAwEsOm3pa55@w0rd")
+	viper.SetDefault("database.dbname", "inventory_db")
+	viper.SetDefault("database.sslmode", "disable")
+
+	// Logger defaults
+	viper.SetDefault("logger.level", "info")
+	viper.SetDefault("logger.format", "console")
+
+	// Environment
+	viper.SetDefault("env", "development")
 }
 
 // DatabaseURL returns the database connection URL
@@ -74,21 +115,4 @@ func (c *Config) DatabaseURL() string {
 // ServerAddress returns the server address
 func (c *Config) ServerAddress() string {
 	return fmt.Sprintf("%s:%d", c.Server.Host, c.Server.Port)
-}
-
-// Helper functions
-func getEnvOrDefault(key, defaultValue string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return defaultValue
-}
-
-func getIntEnvOrDefault(key string, defaultValue int) int {
-	if value := os.Getenv(key); value != "" {
-		if intValue, err := strconv.Atoi(value); err == nil {
-			return intValue
-		}
-	}
-	return defaultValue
 }

@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"log"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -60,20 +59,13 @@ func main() {
 	router := httpInfra.NewRouter(productHandler)
 	router.SetupRoutes()
 
-	// Create HTTP server
-	server := &http.Server{
-		Addr:           cfg.ServerAddress(),
-		Handler:        router.GetEngine(),
-		ReadTimeout:    15 * time.Second,
-		WriteTimeout:   15 * time.Second,
-		IdleTimeout:    60 * time.Second,
-		MaxHeaderBytes: 1 << 20, // 1MB
-	}
+	// Get Fiber app
+	app := router.GetApp()
 
 	// Start server in a goroutine
 	go func() {
 		appLogger.Info("Starting HTTP server", appLogger.WithField("address", cfg.ServerAddress()))
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := app.Listen(cfg.ServerAddress()); err != nil {
 			appLogger.Fatal("Failed to start server", appLogger.WithField("error", err))
 		}
 	}()
@@ -90,7 +82,7 @@ func main() {
 	defer cancel()
 
 	// Shutdown the server
-	if err := server.Shutdown(ctx); err != nil {
+	if err := app.ShutdownWithContext(ctx); err != nil {
 		appLogger.Fatal("Server forced to shutdown", appLogger.WithField("error", err))
 	}
 

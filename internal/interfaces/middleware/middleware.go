@@ -1,70 +1,46 @@
 package middleware
 
 import (
-	"net/http"
-
-	"github.com/gin-gonic/gin"
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/google/uuid"
 )
 
-// CORS adds CORS headers to responses
-func CORS() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.Header("Access-Control-Allow-Origin", "*")
-		c.Header("Access-Control-Allow-Credentials", "true")
-		c.Header("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
-		c.Header("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE")
-
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(http.StatusNoContent)
-			return
-		}
-
-		c.Next()
-	}
+// CORS returns CORS middleware for Fiber
+func CORS() fiber.Handler {
+	return cors.New(cors.Config{
+		AllowOrigins:     "*",
+		AllowCredentials: true,
+		AllowHeaders:     "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With",
+		AllowMethods:     "POST, OPTIONS, GET, PUT, DELETE",
+	})
 }
 
 // JSONContentType ensures the request content type is JSON
-func JSONContentType() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		if c.Request.Method == "POST" || c.Request.Method == "PUT" || c.Request.Method == "PATCH" {
-			contentType := c.GetHeader("Content-Type")
+func JSONContentType() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		if c.Method() == "POST" || c.Method() == "PUT" || c.Method() == "PATCH" {
+			contentType := c.Get("Content-Type")
 			if contentType != "application/json" {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "Content-Type must be application/json"})
-				c.Abort()
-				return
+				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+					"error": "Content-Type must be application/json",
+				})
 			}
 		}
-		c.Next()
+		return c.Next()
 	}
 }
 
 // RequestID adds a request ID to each request
-func RequestID() gin.HandlerFunc {
-	return gin.HandlerFunc(func(c *gin.Context) {
-		requestID := c.GetHeader("X-Request-ID")
+func RequestID() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		requestID := c.Get("X-Request-ID")
 		if requestID == "" {
-			// Generate a simple request ID if not provided
-			requestID = generateRequestID()
+			requestID = uuid.New().String()
 		}
 
-		c.Set("RequestID", requestID)
-		c.Header("X-Request-ID", requestID)
-		c.Next()
-	})
-}
-
-// generateRequestID generates a simple request ID
-func generateRequestID() string {
-	// Simple implementation - in production, use a proper UUID or similar
-	return "req-" + randomString(8)
-}
-
-// randomString generates a random string of specified length
-func randomString(length int) string {
-	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	b := make([]byte, length)
-	for i := range b {
-		b[i] = charset[len(charset)/2] // Simplified for demo
+		c.Locals("RequestID", requestID)
+		c.Set("X-Request-ID", requestID)
+		return c.Next()
 	}
-	return string(b)
 }
