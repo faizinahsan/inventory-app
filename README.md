@@ -82,26 +82,46 @@ inventory-app/
    go mod download
    ```
 
-3. **Set up environment variables**
+3. **Start PostgreSQL with Docker**
    ```bash
-   cp .env.example .env
-   # Edit .env with your configuration
+   # Run PostgreSQL container
+   docker run --name postgres \
+     -e POSTGRES_USER=user \
+     -e POSTGRES_PASSWORD=myAwEsOm3pa55@w0rd \
+     -e POSTGRES_DB=inventory_db \
+     -p 5432:5432 \
+     -d postgres:15
+   
+   # Or use existing container
+   docker start postgres
    ```
 
-4. **Set up the database**
+4. **Set up environment variables**
    ```bash
-   # Create PostgreSQL database
-   createdb inventory_db
+   cp .env.example .env
+   # Edit .env with your configuration if needed
+   # Make sure DNSDB in Makefile matches your Docker setup
+   ```
+
+5. **Install development tools (goose migration)**
+   ```bash
+   make install-tools
+   ```
+
+6. **Run database migrations**
+   ```bash
+   # Check migration status
+   make migrate-status
    
    # Run migrations
    make migrate-up
    ```
 
-5. **Run the application**
+7. **Run the application**
    ```bash
    make run
-   # or
-   go run cmd/api/main.go
+   # or for development with hot reload
+   make dev
    ```
 
 ### Development
@@ -183,6 +203,102 @@ make docker-compose-up
 make docker-compose-down
 ```
 
+## 🔧 Troubleshooting
+
+### Database Connection Issues
+
+1. **PostgreSQL container not running**
+   ```bash
+   # Check if container is running
+   docker ps | grep postgres
+   
+   # Start existing container
+   docker start postgres
+   
+   # Or create new container with correct credentials
+   docker run --name postgres \
+     -e POSTGRES_USER=user \
+     -e POSTGRES_PASSWORD=myAwEsOm3pa55@w0rd \
+     -e POSTGRES_DB=inventory_db \
+     -p 5432:5432 \
+     -d postgres:15
+   ```
+
+2. **Connection refused**
+   ```bash
+   # Check if PostgreSQL is accessible
+   pg_isready -h localhost -p 5432
+   
+   # Check Docker container logs
+   docker logs postgres
+   ```
+
+3. **Database doesn't exist**
+   ```bash
+   # Create database in existing container
+   docker exec -it postgres createdb -U user inventory_db
+   
+   # Or recreate container with POSTGRES_DB env var
+   docker rm -f postgres
+   docker run --name postgres \
+     -e POSTGRES_USER=user \
+     -e POSTGRES_PASSWORD=myAwEsOm3pa55@w0rd \
+     -e POSTGRES_DB=inventory_db \
+     -p 5432:5432 \
+     -d postgres:15
+   ```
+
+4. **Migration errors**
+   ```bash
+   # Check migration status
+   make migrate-status
+   
+   # Try running migrations with --allow-missing flag (already included)
+   make migrate-up
+   
+   # If still failing, check goose installation
+   make install-tools
+   ```
+
+### Goose Migration Issues
+
+1. **Goose command not found**
+   ```bash
+   # Install goose tool
+   make install-tools
+   
+   # Or install manually
+   GOBIN=/usr/local/bin go install github.com/pressly/goose/v3/cmd/goose@latest
+   ```
+
+2. **Migration file format**
+   ```bash
+   # Create migration with correct format
+   make goose-create file=your_migration_name
+   
+   # This will create: YYYYMMDDHHMMSS_your_migration_name.sql
+   ```
+
+3. **Connection string issues**
+   ```bash
+   # Check DNSDB variable in Makefile matches your Docker setup
+   # Default: postgres://user:myAwEsOm3pa55@w0rd@localhost:5432/inventory_db?sslmode=disable
+   ```
+
+### Build Issues
+
+1. **Go version compatibility**
+   ```bash
+   go version  # Should be 1.21 or later
+   ```
+
+2. **Dependencies issues**
+   ```bash
+   go mod download
+   go mod tidy
+   ```
+
+
 ## 🛠️ Development Tools
 
 ### Available Make Commands
@@ -191,19 +307,48 @@ make docker-compose-down
 make help              # Show all available commands
 make build             # Build the application
 make run               # Run the application
-make dev               # Run with hot reload
+make dev               # Run with hot reload (requires air)
 make test              # Run tests
 make test-coverage     # Run tests with coverage
 make clean             # Clean build artifacts
 make deps              # Install dependencies
+make install-tools     # Install goose migration tool
+make goose-create file=migration_name  # Create new migration file
 make migrate-up        # Run database migrations
-make migrate-down      # Rollback migrations
-make migrate-create    # Create new migration
+make migrate-down      # Rollback database migrations  
+make migrate-status    # Check migration status
 make docker-build      # Build Docker image
 make docker-run        # Run Docker container
 make fmt               # Format code
 make lint              # Run linter
-make install-tools     # Install development tools
+```
+
+### Database Migration with Goose
+
+The project uses **goose** for database migrations:
+
+```bash
+# Install goose tool
+make install-tools
+
+# Create new migration
+make goose-create file=add_users_table
+
+# Check migration status
+make migrate-status
+
+# Run migrations
+make migrate-up
+
+# Rollback last migration
+make migrate-down
+```
+
+**Migration Files Location:** `internal/infrastructure/database/migrations/`
+
+**Database Connection:** The connection string is defined in Makefile as `DNSDB` variable:
+```
+postgres://user:myAwEsOm3pa55@w0rd@localhost:5432/inventory_db?sslmode=disable
 ```
 
 ### Code Quality
@@ -230,13 +375,18 @@ make lint
 | `SERVER_PORT` | Server port | `8080` |
 | `DB_HOST` | Database host | `localhost` |
 | `DB_PORT` | Database port | `5432` |
-| `DB_USER` | Database user | `inventory_user` |
-| `DB_PASSWORD` | Database password | `inventory_pass` |
+| `DB_USER` | Database user | `user` |
+| `DB_PASSWORD` | Database password | `myAwEsOm3pa55@w0rd` |
 | `DB_NAME` | Database name | `inventory_db` |
 | `DB_SSL_MODE` | Database SSL mode | `disable` |
 | `LOG_LEVEL` | Log level (debug/info/warn/error) | `info` |
 | `LOG_FORMAT` | Log format (json/console) | `console` |
 | `ENV` | Environment (development/production) | `development` |
+
+**Note:** Database credentials must match the `DNSDB` connection string in Makefile:
+```
+postgres://user:myAwEsOm3pa55@w0rd@localhost:5432/inventory_db?sslmode=disable
+```
 
 ## 📋 TODO
 

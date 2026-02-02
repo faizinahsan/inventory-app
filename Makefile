@@ -3,7 +3,7 @@
 # Variables
 APP_NAME=inventory-app
 DOCKER_IMAGE=inventory-app:latest
-DB_URL=postgres://inventory_user:inventory_pass@localhost:5432/inventory_db?sslmode=disable
+DNSDB=postgres://user:myAwEsOm3pa55@w0rd@localhost:5432/inventory_db?sslmode=disable
 
 # Go commands
 build:
@@ -39,25 +39,19 @@ deps:
 	go mod tidy
 
 # Database commands
+# Makefile For Goose
+DBNAME := pouch   # NAMA DB yang akan di migrasi
+goose-create:
+	goose -dir internal/infrastructure/database/migrations create ${file} sql
+
 migrate-up:
-	@echo "Running database migrations..."
-	@if command -v migrate >/dev/null 2>&1; then \
-		migrate -path internal/infrastructure/database/migrations -database "$(DB_URL)" up; \
-	else \
-		echo "migrate tool not installed. Install with: go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest"; \
-	fi
+	goose -dir internal/infrastructure/database/migrations postgres "$(DNSDB)" up --allow-missing
 
 migrate-down:
-	@echo "Rolling back database migrations..."
-	@if command -v migrate >/dev/null 2>&1; then \
-		migrate -path internal/infrastructure/database/migrations -database "$(DB_URL)" down; \
-	else \
-		echo "migrate tool not installed. Install with: go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest"; \
-	fi
+	goose -dir internal/infrastructure/database/migrations postgres "$(DNSDB)" down
 
-migrate-create:
-	@read -p "Enter migration name: " name; \
-	migrate create -ext sql -dir internal/infrastructure/database/migrations -seq $$name
+migrate-status:
+	goose -dir internal/infrastructure/database/migrations postgres "$(DNSDB)" status
 
 # Docker commands
 docker-build:
@@ -79,8 +73,9 @@ docker-compose-down:
 # Tools
 install-tools:
 	@echo "Installing development tools..."
-	go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
-	go install github.com/cosmtrek/air@latest
+	@echo "Installing goose to /usr/local/bin..."
+	@GOBIN=/usr/local/bin go install github.com/pressly/goose/v3/cmd/goose@latest
+	@echo "goose installed successfully. You can now use 'make migrate-up'"
 
 # Linting and formatting
 fmt:
@@ -107,7 +102,9 @@ help:
 	@echo "  deps           - Install dependencies"
 	@echo "  migrate-up     - Run database migrations"
 	@echo "  migrate-down   - Rollback database migrations"
+	@echo "  migrate-status - Check migration status"
 	@echo "  migrate-create - Create new migration"
+	@echo "  migrate-simple - Run migration with psql (fallback)"
 	@echo "  docker-build   - Build Docker image"
 	@echo "  docker-run     - Run Docker container"
 	@echo "  fmt            - Format code"

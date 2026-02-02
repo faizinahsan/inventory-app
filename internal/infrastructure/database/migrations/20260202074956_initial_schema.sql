@@ -1,3 +1,5 @@
+-- +goose Up
+-- +goose StatementBegin
 -- Create categories table
 CREATE TABLE IF NOT EXISTS categories (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -56,7 +58,7 @@ BEGIN
     NEW.updated_at = NOW();
     RETURN NEW;
 END;
-$$ language 'plpgsql';
+$$ LANGUAGE 'plpgsql';
 
 -- Create triggers for updated_at
 CREATE TRIGGER update_categories_updated_at BEFORE UPDATE ON categories
@@ -64,3 +66,31 @@ CREATE TRIGGER update_categories_updated_at BEFORE UPDATE ON categories
 
 CREATE TRIGGER update_products_updated_at BEFORE UPDATE ON products
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+-- +goose StatementEnd
+
+-- +goose Down
+-- +goose StatementBegin
+-- Drop triggers
+DROP TRIGGER IF EXISTS update_products_updated_at ON products;
+DROP TRIGGER IF EXISTS update_categories_updated_at ON categories;
+
+-- Drop function
+DROP FUNCTION IF EXISTS update_updated_at_column();
+
+-- Drop indexes
+DROP INDEX IF EXISTS idx_transactions_created_at;
+DROP INDEX IF EXISTS idx_transactions_type;
+DROP INDEX IF EXISTS idx_transactions_product_id;
+DROP INDEX IF EXISTS idx_categories_status;
+DROP INDEX IF EXISTS idx_categories_parent_id;
+DROP INDEX IF EXISTS idx_products_stock;
+DROP INDEX IF EXISTS idx_products_status;
+DROP INDEX IF EXISTS idx_products_category_id;
+DROP INDEX IF EXISTS idx_products_sku;
+
+-- Drop tables (in reverse order due to foreign key constraints)
+DROP TABLE IF EXISTS transactions;
+DROP TABLE IF EXISTS products;
+DROP TABLE IF EXISTS categories;
+-- +goose StatementEnd
+
