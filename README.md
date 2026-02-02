@@ -121,9 +121,16 @@ inventory-app/
    # Check migration status
    make migrate-status
    
-   # Run migrations
+   # Run migrations (includes initial schema + dummy data)
    make migrate-up
    ```
+
+   **Note:** The migration includes realistic dummy data with:
+   - 5 root categories and 6 subcategories (Electronics, Clothing, etc.)
+   - 15 sample products (iPhones, laptops, clothing, etc.)
+   - 15 sample transactions (stock in/out/adjustments)
+   
+   See `DUMMY_DATA.md` for complete details.
 
 7. **Run the application**
    ```bash
