@@ -41,7 +41,7 @@ deps:
 # Database commands
 # Makefile For Goose
 DBNAME := pouch   # NAMA DB yang akan di migrasi
-goose-create:
+migrate-create:
 	goose -dir internal/infrastructure/database/migrations create ${file} sql
 
 migrate-up:
