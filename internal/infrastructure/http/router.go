@@ -10,12 +10,17 @@ import (
 
 // Router holds the HTTP router and handlers
 type Router struct {
-	app            *fiber.App
-	productHandler *handlers.ProductHandler
+	app                *fiber.App
+	productHandler     *handlers.ProductHandler
+	categoryHandler    *handlers.CategoryHandler
+	transactionHandler *handlers.TransactionHandler
 }
 
 // NewRouter creates a new HTTP router
-func NewRouter(productHandler *handlers.ProductHandler) *Router {
+func NewRouter(
+	productHandler *handlers.ProductHandler,
+	categoryHandler *handlers.CategoryHandler,
+	transactionHandler *handlers.TransactionHandler) *Router {
 	app := fiber.New(fiber.Config{
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
 			code := fiber.StatusInternalServerError
@@ -34,8 +39,10 @@ func NewRouter(productHandler *handlers.ProductHandler) *Router {
 	app.Use(middleware.CORS())
 
 	return &Router{
-		app:            app,
-		productHandler: productHandler,
+		app:                app,
+		productHandler:     productHandler,
+		categoryHandler:    categoryHandler,
+		transactionHandler: transactionHandler,
 	}
 }
 
