@@ -45,8 +45,8 @@ func Load() (*Config, error) {
 		Database: DatabaseConfig{
 			Host:     getEnvOrDefault("DB_HOST", "localhost"),
 			Port:     getIntEnvOrDefault("DB_PORT", 5432),
-			User:     getEnvOrDefault("DB_USER", "inventory_user"),
-			Password: getEnvOrDefault("DB_PASSWORD", "inventory_pass"),
+			User:     getEnvOrDefault("DB_USER", "user"),
+			Password: getEnvOrDefault("DB_PASSWORD", "myAwEsOm3pa55@w0rd"),
 			DBName:   getEnvOrDefault("DB_NAME", "inventory_db"),
 			SSLMode:  getEnvOrDefault("DB_SSL_MODE", "disable"),
 		},
